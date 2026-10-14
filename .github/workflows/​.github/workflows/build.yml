@@ -1,0 +1,63 @@
+name: Compilar APK con Buildozer
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clonar repositorio
+      uses: actions/checkout@v4
+
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Instalar dependencias del sistema
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          python3-pip \
+          build-essential \
+          git \
+          ffmpeg \
+          libsdl2-dev \
+          libsdl2-image-dev \
+          libsdl2-mixer-dev \
+          libsdl2-ttf-dev \
+          libportmidi-dev \
+          libswscale-dev \
+          libavformat-dev \
+          libavcodec-dev \
+          zlib1g-dev \
+          libffi-dev \
+          libssl-dev
+
+    - name: Instalar Buildozer y Cython
+      run: |
+        pip install --upgrade pip
+        pip install "cython<3.0.0"
+        pip install buildozer
+
+    - name: Inicializar buildozer.spec
+      run: |
+        if [ ! -f "buildozer.spec" ]; then
+          buildozer init
+        fi
+        sed -i 's/#requirements = python3,kivy/requirements = python3,kivy/' buildozer.spec
+        sed -i 's/#android.archs = armeabi-v7a/android.archs = arm64-v8a/' buildozer.spec
+
+    - name: Compilar APK con buildozer
+      run: |
+        buildozer -v android debug
+
+    - name: Subir APK generado
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug
+        path: bin/*.apk
